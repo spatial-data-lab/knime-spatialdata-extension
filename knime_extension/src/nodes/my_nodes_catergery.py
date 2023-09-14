@@ -153,3 +153,46 @@ class OpenSkyNetworkDataNode:
             crs="EPSG:4326",
         )
         return knext.Table.from_pandas(gdf)
+
+
+############################################
+# Blockchain Data Center Node
+############################################
+@knext.node(
+    name="Blockchain Data Center",
+    node_type=knext.NodeType.SOURCE,
+    icon_path=__NODE_ICON_PATH + "BlockchainDataCenter.png",
+    category=__category,
+    after="",
+)
+@knext.output_table(
+    name="Blockchain Data Center Table",
+    description="Retrieved geodata from Blockchain Data Center",
+)
+class BlockchainDataCenterNode:
+    """This node retrieves Blockchain Data Center.
+    Blockchain Data Center is a data center that is used to store blockchain data.
+    Please refer to [Blockchain Data Center Dashboard](https://dashboard.internetcomputer.org/centers) for more details.
+    """
+
+    def configure(self, configure_context):
+        # TODO Create combined schema
+        return None
+
+    def execute(self, exec_context: knext.ExecutionContext):
+        import geopandas as gp
+        import pandas as pd
+        import requests
+
+        url = "https://ic-api.internetcomputer.org/api/v3/data-centers"
+        response = requests.get(url, timeout=120)
+        json_data = response.json()
+        data = pd.DataFrame(json_data["data_centers"])
+
+        gdf = gp.GeoDataFrame(
+            data,
+            geometry=gp.points_from_xy(data.longitude, data.latitude),
+            crs="EPSG:4326",
+        )
+
+        return knext.Table.from_pandas(gdf)
