@@ -68,3 +68,88 @@ class GDELTGKGNode:
         data = response.json()
         gdf = gp.GeoDataFrame.from_features(data, crs="EPSG:4326")
         return knext.Table.from_pandas(gdf)
+
+
+############################################
+# Open Sky Network Data Node
+############################################
+@knext.node(
+    name="Open Sky Network Data",
+    node_type=knext.NodeType.SOURCE,
+    icon_path=__NODE_ICON_PATH + "OpenSkyNetwork.png",
+    category=__category,
+    after="",
+)
+@knext.output_table(
+    name="Open Sky Network Data Table",
+    description="Retrieved geodata from Open Sky Network Data",
+)
+class OpenSkyNetworkDataNode:
+    """This node retrieves Open Sky Network Data.
+    The OpenSky Network is a non-profit association based in Switzerland that operates a crowdsourced global
+    database of air traffic control data.
+    The network consists of thousands of sensors connected to the Internet by volunteers, whose main purpose is to
+    measure the radio signals emitted by aircraft to track their position.
+    Please refer to [Open Sky Network Document](https://opensky-network.org/) for more details.
+    """
+
+    user = knext.StringParameter(
+        label="User",
+        description="The user name to access Open Sky Network Data.",
+        default_value="",
+    )
+
+    password = knext.StringParameter(
+        label="Password",
+        description="The password to access Open Sky Network Data.",
+        default_value="",
+    )
+
+    def configure(self, configure_context):
+        # TODO Create combined schema
+        return None
+
+    def execute(self, exec_context: knext.ExecutionContext):
+        import geopandas as gp
+        import pandas as pd
+        import requests
+
+        url = "https://opensky-network.org/api/states/all"
+        kws = {"url": url, "timeout": 120}
+        if len(self.user) != 0 and len(self.password) != 0:
+            kws["auth"] = (self.user, self.password)
+
+        response = requests.get(**kws)
+        # if (self.user is not None or ) and (self.password is not None or len(self.password)!=0):
+        #     response = requests.get(url, timeout=120,auth=(self.user, self.password))
+        # else:
+        #     response = requests.get(url, timeout=120)
+        json_data = response.json()
+        states = pd.DataFrame(
+            json_data["states"],
+            columns=[
+                "icao24",
+                "callsign",
+                "origin_country",
+                "time_position",
+                "last_contact",
+                "longitude",
+                "latitude",
+                "baro_altitude",
+                "on_ground",
+                "velocity",
+                "true_track",
+                "vertical_rate",
+                "sensors",
+                "geo_altitude",
+                "squawk",
+                "spi",
+                "position_source",
+            ],
+        )
+        gdf = gp.GeoDataFrame(
+            states,
+            geometry=gp.points_from_xy(states.longitude, states.latitude),
+            crs="EPSG:4326",
+        )
+        return knext.Table.from_pandas(gdf)
