@@ -5,3 +5,4 @@ __pycache__/
 config_*.yml
 .vscode/*
 *.ipynb
+tests/data/LA_Hub_Datasets.zip

@@ -196,3 +196,71 @@ class BlockchainDataCenterNode:
         )
 
         return knext.Table.from_pandas(gdf)
+
+############################################
+# Download Data From ArcGIS Online Node
+############################################
+@knext.node(
+    name="Download Data From ArcGIS Online",
+    node_type=knext.NodeType.SOURCE,
+    icon_path=__NODE_ICON_PATH + "ArcGISOnline.png",
+    category=__category,
+    after="",
+)
+@knext.output_table(
+    name="data content",
+    description="Retrieved data contents from ArcGIS Online",
+)
+class DownloadDataFromArcGISOnlineNode:
+    """This node retrieves data from ArcGIS Online.
+    ArcGIS Online is a complete cloud-based GIS mapping software that connects people, locations and data using interactive maps.
+    Please refer to [ArcGIS Online](https://www.arcgis.com/home/index.html) for more details.
+    """
+
+    public_data_item_id = knext.StringParameter(
+        label="Public Data Item ID",
+        description="The public data item ID to download from ArcGIS Online.",
+        default_value="a04933c045714492bda6886f355416f2",
+    )
+
+    download_path = knext.StringParameter(
+        label="Download Path",
+        description="The path to save the downloaded data.",
+        default_value="C:\\Users\\xif626\\Downloads",
+    )
+
+    def configure(self, configure_context):
+        # TODO Create combined schema
+        return None
+    
+    def execute(self, exec_context: knext.ExecutionContext):
+        from arcgis.gis import GIS
+        from pathlib import Path
+        from zipfile import ZipFile
+        import pandas as pd
+        gis = GIS()
+
+        public_data_item_id = self.public_data_item_id
+        data_item = gis.content.get(public_data_item_id)
+
+
+        # download_path = knext.get_workflow_data_area_dir(exec_context)
+        # download_path = "data"
+        download_path = self.download_path
+        # configure where to save the data, and where the ZIP file is located
+        data_path = Path(download_path)
+        if not data_path.exists():
+            data_path.mkdir()
+        # zip_path = data_path.joinpath('%s.zip'%public_data_item_id)
+        # extract_path = data_path.joinpath(public_data_item_id)
+        data_item.download(save_path=data_path)
+
+        zip_file_path = data_path.joinpath(data_item.name)
+        zip_file = ZipFile(zip_file_path)
+        zip_file.extractall(path=data_path)
+        extract_path = data_path.joinpath(data_item.name.strip('.zip'))
+        files = [str(file) for file in extract_path.glob('*')]
+        df = pd.DataFrame(files, columns=['file_name'])
+        # df = pd.DataFrame([])
+        return knext.Table.from_pandas(df)
+
